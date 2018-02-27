@@ -1,8 +1,11 @@
 package main
 
 import (
+	"bufio"
+	"bytes"
 	"fmt"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"strings"
 )
@@ -20,7 +23,30 @@ func main() {
 			wd = filepath.Dir(wd)
 		}
 	}
-	paths := strings.Split(os.Getenv("GOPATH"), ":")
+	oldPath := os.Getenv("GOPATH")
+	if oldPath == "" {
+		env, err := exec.Command("go", "env").Output()
+		if err != nil {
+			fmt.Println(err)
+			os.Exit(1)
+		}
+		scanner := bufio.NewScanner(bytes.NewReader(env))
+		for scanner.Scan() {
+			line := scanner.Text()
+			if strings.HasPrefix(line, "GOPATH=") {
+				oldPath = strings.Trim(line[7:], "\"")
+				break
+			}
+		}
+	}
+	var paths []string
+	if oldPath != "" {
+		if strings.Contains(oldPath, ":") {
+			paths = strings.Split(oldPath, ":")
+		} else {
+			paths = append(paths, oldPath)
+		}
+	}
 	if gopath != "" {
 		exist := false
 		for _, v := range paths {
